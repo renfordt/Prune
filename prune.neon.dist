@@ -1,0 +1,15 @@
+parameters:
+    paths:
+        - src
+    excludePaths:
+        - vendor
+    extensions:
+        - php
+    format: console
+#    blade:
+#        enabled: true  # enabled by default
+#        viewPaths:
+#            - resources/views
+#        excludeViews:
+#            - errors.404
+#            - errors.500

@@ -1,0 +1,25 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+(static function (): void {
+    $autoloadPaths = [
+        __DIR__ . '/../vendor/autoload.php',
+        __DIR__ . '/../../../autoload.php',
+    ];
+
+    foreach ($autoloadPaths as $autoloadPath) {
+        if (file_exists($autoloadPath)) {
+            require_once $autoloadPath;
+
+            return;
+        }
+    }
+
+    fwrite(STDERR, "Could not find autoloader. Run 'composer install'.\n");
+    exit(1);
+})();
+
+$application = new \Renfordt\Prune\PruneApplication();
+$application->run();
