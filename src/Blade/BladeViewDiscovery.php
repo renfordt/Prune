@@ -52,7 +52,7 @@ class BladeViewDiscovery
                 continue;
             }
 
-            if (! str_starts_with($filePath, $realBase . '/')) {
+            if (! str_starts_with($filePath, $realBase . DIRECTORY_SEPARATOR)) {
                 continue;
             }
 
@@ -62,7 +62,7 @@ class BladeViewDiscovery
                 continue;
             }
 
-            return str_replace('/', '.', $relative);
+            return str_replace(DIRECTORY_SEPARATOR, '.', $relative);
         }
 
         return null;

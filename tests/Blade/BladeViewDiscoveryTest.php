@@ -46,6 +46,6 @@ class BladeViewDiscoveryTest extends TestCase
         $layoutView = array_find($views, fn ($view): bool => $view->viewName === 'layouts.app');
 
         $this->assertNotNull($layoutView);
-        $this->assertStringEndsWith('layouts/app.blade.php', $layoutView->file);
+        $this->assertStringEndsWith('layouts' . DIRECTORY_SEPARATOR . 'app.blade.php', $layoutView->file);
     }
 }
