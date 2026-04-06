@@ -50,6 +50,45 @@ class BladeViewDiscoveryTest extends TestCase
     }
 
     #[Test]
+    public function itPrefersSpecificPathOverParentPath(): void
+    {
+        $discovery = new BladeViewDiscovery();
+        // Simulate passing both "resources/" and "resources/views/" as view paths,
+        // which happens when the user runs: prune app resources routes
+        $parentDir = dirname(__DIR__) . '/Fixtures/blade';
+        $viewsDir = $parentDir . '/views';
+        $views = $discovery->discover([$parentDir, $viewsDir]);
+
+        $viewNames = array_map(fn (BladeEntry $e): string => $e->viewName, $views);
+
+        // Must resolve relative to the most specific base (views/), NOT the parent (blade/)
+        $this->assertContains('welcome', $viewNames);
+        $this->assertNotContains('views.welcome', $viewNames);
+
+        // Components and Livewire must keep their directory prefix
+        $this->assertContains('components.alert', $viewNames);
+        $this->assertNotContains('views.components.alert', $viewNames);
+        $this->assertContains('livewire.counter', $viewNames);
+        $this->assertNotContains('views.livewire.counter', $viewNames);
+        $this->assertContains('layouts.app', $viewNames);
+        $this->assertNotContains('views.layouts.app', $viewNames);
+    }
+
+    #[Test]
+    public function itDeduplicatesOverlappingPaths(): void
+    {
+        $discovery = new BladeViewDiscovery();
+        $parentDir = dirname(__DIR__) . '/Fixtures/blade';
+        $viewsDir = $parentDir . '/views';
+        $views = $discovery->discover([$parentDir, $viewsDir]);
+
+        $filePaths = array_map(fn (BladeEntry $e): string => $e->file, $views);
+
+        // Each file must appear exactly once, even with overlapping discovery paths
+        $this->assertSame($filePaths, array_unique($filePaths));
+    }
+
+    #[Test]
     public function itStripsLivewire4BoltPrefixFromViewName(): void
     {
         $discovery = new BladeViewDiscovery();

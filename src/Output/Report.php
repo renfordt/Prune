@@ -19,6 +19,11 @@ final readonly class Report
     ) {
     }
 
+    /**
+     * Checks if there are any orphans present in the class or blade entries.
+     *
+     * @return bool Returns true if there are class or blade orphans, otherwise false.
+     */
     public function hasOrphans(): bool
     {
         return $this->classOrphans !== [] || $this->bladeOrphans !== [];

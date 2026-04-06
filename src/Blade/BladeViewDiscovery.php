@@ -20,6 +20,12 @@ class BladeViewDiscovery
             return [];
         }
 
+        // Sort by path length descending so more specific paths match first
+        // in pathToViewName(). This prevents a parent like resources/ from
+        // matching before resources/views/ and producing wrong view names
+        // (e.g. "views.about" instead of "about").
+        usort($existingPaths, fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+
         $finder = new Finder();
         $finder->files()->in($existingPaths)->name('*.blade.php')->sortByName();
 
@@ -30,15 +36,20 @@ class BladeViewDiscovery
                 continue;
             }
 
+            // Deduplicate: overlapping discovery paths can find the same file twice
+            if (isset($entries[$realPath])) {
+                continue;
+            }
+
             $viewName = $this->pathToViewName($realPath, $existingPaths);
             if ($viewName === null) {
                 continue;
             }
 
-            $entries[] = new BladeEntry($viewName, $realPath);
+            $entries[$realPath] = new BladeEntry($viewName, $realPath);
         }
 
-        return $entries;
+        return array_values($entries);
     }
 
     /**

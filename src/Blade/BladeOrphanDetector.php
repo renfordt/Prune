@@ -7,10 +7,12 @@ namespace Renfordt\Prune\Blade;
 class BladeOrphanDetector
 {
     /**
-     * @param  list<BladeEntry>  $bladeViews
-     * @param  list<string>  $references
-     * @param  list<string>  $excludeViews
-     * @return list<BladeEntry>
+     * Detects and returns a list of orphan Blade views.
+     *
+     * @param list<BladeEntry> $bladeViews An array of BladeEntry objects representing all available Blade views.
+     * @param list<string> $references An array of view names that are considered referenced.
+     * @param list<string> $excludeViews An optional array of view names to be excluded from detection.
+     * @return list<BladeEntry> An array of BladeEntry objects that are neither referenced nor excluded, sorted by view name.
      */
     public function detect(array $bladeViews, array $references, array $excludeViews = []): array
     {

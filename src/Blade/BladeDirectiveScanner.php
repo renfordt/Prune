@@ -50,7 +50,7 @@ class BladeDirectiveScanner
             $matches,
         );
         foreach ($matches[1] as $match) {
-            $references[] = $this->livewireComponentToViewName($match);
+            array_push($references, ...$this->livewireComponentToViewNames($match));
         }
 
         // <livewire:name> — same convention
@@ -60,27 +60,42 @@ class BladeDirectiveScanner
             $matches,
         );
         foreach ($matches[1] as $match) {
-            $references[] = $this->livewireComponentToViewName($match);
+            array_push($references, ...$this->livewireComponentToViewNames($match));
         }
 
         return array_values(array_unique($references));
     }
 
+    /**
+     * Converts a component tag into its corresponding view name.
+     *
+     * @param string $tag The component tag, such as 'x-alert' or 'x-forms.input'.
+     * @return string The converted view name, starting with 'components.', where '::' is replaced with '.'.
+     */
     private function componentTagToViewName(string $tag): string
     {
-        // <x-alert> => components.alert
-        // <x-forms.input> => components.forms.input
-        // Dashes stay as-is in view names, :: becomes .
         $name = str_replace('::', '.', $tag);
 
         return 'components.' . $name;
     }
 
-    private function livewireComponentToViewName(string $component): string
+    /**
+     * Converts a Livewire component identifier to possible view names.
+     *
+     * Returns both the standard livewire/ path and the Volt component pattern
+     * in the components/ directory (e.g. components/⚡foo/foo.blade.php).
+     *
+     * @param string $component The Livewire component identifier.
+     * @return list<string>
+     */
+    private function livewireComponentToViewNames(string $component): array
     {
-        // @livewire('counter') / <livewire:counter> => livewire.counter
-        // @livewire('forms.input') / <livewire:forms.input> => livewire.forms.input
-        // Dashes stay as-is; dots represent subdirectories
-        return 'livewire.' . $component;
+        $segments = explode('.', $component);
+        $lastSegment = end($segments);
+
+        return [
+            'livewire.' . $component,
+            'components.' . $component . '.' . $lastSegment,
+        ];
     }
 }

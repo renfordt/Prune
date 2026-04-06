@@ -18,7 +18,16 @@ use Symfony\Component\Finder\Finder;
 class PruneAnalyzer
 {
     /**
-     * @param  list<string>  $paths  Relative or absolute paths to scan
+     * Analyzes the provided paths for PHP files and Blade templates, scans for orphans,
+     * and generates an analysis report.
+     *
+     * @param Configuration $config Configuration settings including file extensions, excluded paths, and Blade-specific options.
+     * @param list<string> $paths Relative or absolute paths to scan
+     * @param bool $classEnabled Flag to enable or disable analysis for class references and orphans.
+     * @param bool $bladeEnabled Flag to enable or disable analysis for Blade template references and orphans.
+     * @param string $workingDir The working directory to resolve relative paths.
+     *
+     * @return AnalysisResult The result of the analysis, including a report of orphaned references and the number of files processed.
      */
     public function analyze(
         Configuration $config,
@@ -32,10 +41,13 @@ class PruneAnalyzer
             $paths,
         );
 
+        /**
+         * Find all PHP and related files in the given paths.
+         */
         $finder = new Finder();
         $finder->files()->in($absolutePaths);
         foreach ($config->extensions as $ext) {
-            $finder->name('*.' . $ext);
+            $finder->name('*.'.$ext);
         }
         foreach ($config->excludePaths as $exclude) {
             $finder->notPath($exclude);
@@ -52,6 +64,9 @@ class PruneAnalyzer
         $traverser->addVisitor($referenceScanner);
         $traverser->addVisitor($bladeReferenceScanner);
 
+        /**
+         * Traverse all files and build the class map.
+         */
         $fileCount = 0;
         foreach ($finder as $file) {
             $filePath = $file->getRealPath();
@@ -69,22 +84,24 @@ class PruneAnalyzer
             $fileCount++;
         }
 
-        // Scan extra blade reference paths (e.g. routes/) with a blade-only traverser
-        // so that view() / Route::view() calls there are picked up without polluting the class map.
+        /**
+         * Scan extra blade reference paths (e.g. routes/) with a blade-only traverser
+         * so that view() / Route::view() calls there are picked up without polluting the class map.
+         */
         $bladeRefTraverser = new NodeTraverser();
         $bladeRefTraverser->addVisitor(new NameResolver());
         $bladeRefTraverser->addVisitor($bladeReferenceScanner);
 
         foreach ($config->bladeReferencePaths as $refPath) {
             $absRefPath = $this->toAbsolutePath($refPath, $workingDir);
-            if (!is_dir($absRefPath)) {
+            if (! is_dir($absRefPath)) {
                 continue;
             }
 
             $refFinder = new Finder();
             $refFinder->files()->in($absRefPath);
             foreach ($config->extensions as $ext) {
-                $refFinder->name('*.' . $ext);
+                $refFinder->name('*.'.$ext);
             }
 
             foreach ($refFinder as $file) {
@@ -101,6 +118,10 @@ class PruneAnalyzer
                 $bladeRefTraverser->traverse($stmts);
             }
         }
+
+        /**
+         * Detect orphans based on the collected references.
+         */
 
         $classOrphans = [];
         if ($classEnabled) {
@@ -151,6 +172,6 @@ class PruneAnalyzer
             return $path;
         }
 
-        return $workingDir . DIRECTORY_SEPARATOR . $path;
+        return $workingDir.DIRECTORY_SEPARATOR.$path;
     }
 }

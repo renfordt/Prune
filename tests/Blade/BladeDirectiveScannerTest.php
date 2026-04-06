@@ -127,6 +127,7 @@ class BladeDirectiveScannerTest extends TestCase
         $references = $this->scanner->scan($content);
 
         $this->assertContains('livewire.counter', $references);
+        $this->assertContains('components.counter.counter', $references);
     }
 
     #[Test]
@@ -137,6 +138,7 @@ class BladeDirectiveScannerTest extends TestCase
         $references = $this->scanner->scan($content);
 
         $this->assertContains('livewire.counter', $references);
+        $this->assertContains('components.counter.counter', $references);
     }
 
     #[Test]
@@ -147,6 +149,7 @@ class BladeDirectiveScannerTest extends TestCase
         $references = $this->scanner->scan($content);
 
         $this->assertContains('livewire.user-profile', $references);
+        $this->assertContains('components.user-profile.user-profile', $references);
     }
 
     #[Test]
@@ -157,6 +160,7 @@ class BladeDirectiveScannerTest extends TestCase
         $references = $this->scanner->scan($content);
 
         $this->assertContains('livewire.forms.input', $references);
+        $this->assertContains('components.forms.input.input', $references);
     }
 
     #[Test]
@@ -167,6 +171,7 @@ class BladeDirectiveScannerTest extends TestCase
         $references = $this->scanner->scan($content);
 
         $this->assertContains('livewire.forms.input', $references);
+        $this->assertContains('components.forms.input.input', $references);
     }
 
     #[Test]
