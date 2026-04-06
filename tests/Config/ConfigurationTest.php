@@ -23,6 +23,7 @@ class ConfigurationTest extends TestCase
         $this->assertSame('console', $config->format);
         $this->assertTrue($config->bladeEnabled);
         $this->assertSame(['resources/views'], $config->bladeViewPaths);
+        $this->assertSame(['routes'], $config->bladeReferencePaths);
         $this->assertSame([], $config->bladeExcludeViews);
     }
 

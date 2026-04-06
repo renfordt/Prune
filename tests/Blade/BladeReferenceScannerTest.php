@@ -72,6 +72,20 @@ class BladeReferenceScannerTest extends TestCase
     }
 
     #[Test]
+    public function itExtractsRouteViewCallsWithDataArray(): void
+    {
+        $code = <<<'PHP'
+        <?php
+        use Illuminate\Support\Facades\Route;
+        Route::view('/about', 'about', ['key' => 'value'])->name('about');
+        PHP;
+
+        $references = $this->scanCode($code);
+
+        $this->assertContains('about', $references);
+    }
+
+    #[Test]
     public function itExtractsThisViewCalls(): void
     {
         $code = <<<'PHP'
