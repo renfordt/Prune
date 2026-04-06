@@ -118,29 +118,6 @@ class BladeReferenceScannerTest extends TestCase
         $this->assertSame([], $references);
     }
 
-    #[Test]
-    public function itCanBeReset(): void
-    {
-        $scanner = new BladeReferenceScanner();
-        $code = <<<'PHP'
-        <?php
-        view('test');
-        PHP;
-
-        $parser = new ParserFactory()->createForNewestSupportedVersion();
-        $traverser = new NodeTraverser();
-        $traverser->addVisitor(new NameResolver());
-        $traverser->addVisitor($scanner);
-
-        $stmts = $parser->parse($code);
-        $traverser->traverse($stmts);
-
-        $this->assertCount(1, $scanner->getReferences());
-
-        $scanner->reset();
-        $this->assertSame([], $scanner->getReferences());
-    }
-
     /**
      * @return list<string>
      */

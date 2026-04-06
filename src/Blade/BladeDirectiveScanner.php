@@ -60,7 +60,7 @@ class BladeDirectiveScanner
             $matches,
         );
         foreach ($matches[1] as $match) {
-            $references[] = str_replace('-', '-', $match);
+            $references[] = $match;
         }
 
         return array_values(array_unique($references));
@@ -70,9 +70,8 @@ class BladeDirectiveScanner
     {
         // <x-alert> => components.alert
         // <x-forms.input> => components.forms.input
-        // Convert kebab-case segments to kebab (they stay as-is in view names)
+        // Dashes stay as-is in view names, :: becomes .
         $name = str_replace('::', '.', $tag);
-        $name = str_replace('-', '-', $name);
 
         return 'components.' . $name;
     }

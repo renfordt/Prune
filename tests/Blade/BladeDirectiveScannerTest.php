@@ -140,6 +140,26 @@ class BladeDirectiveScannerTest extends TestCase
     }
 
     #[Test]
+    public function itExtractsKebabCaseLivewireTags(): void
+    {
+        $content = '<livewire:user-profile />';
+
+        $references = $this->scanner->scan($content);
+
+        $this->assertContains('user-profile', $references);
+    }
+
+    #[Test]
+    public function itExtractsKebabCaseComponentTags(): void
+    {
+        $content = '<x-alert-box />';
+
+        $references = $this->scanner->scan($content);
+
+        $this->assertContains('components.alert-box', $references);
+    }
+
+    #[Test]
     public function itReturnsEmptyForNoDirectives(): void
     {
         $content = '<div>Hello world</div>';

@@ -26,26 +26,11 @@ class BladeOrphanDetector
                 continue;
             }
 
-            // Also check component-style reference for views in components/ directory
-            $componentName = $this->viewNameToComponentTag($entry->viewName);
-            if ($componentName !== null && isset($referencedSet[$componentName])) {
-                continue;
-            }
-
             $orphans[] = $entry;
         }
 
         usort($orphans, fn (BladeEntry $a, BladeEntry $b): int => $a->viewName <=> $b->viewName);
 
         return $orphans;
-    }
-
-    private function viewNameToComponentTag(string $viewName): ?string
-    {
-        if (! str_starts_with($viewName, 'components.')) {
-            return null;
-        }
-
-        return $viewName;
     }
 }

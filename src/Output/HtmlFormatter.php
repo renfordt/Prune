@@ -25,6 +25,21 @@ class HtmlFormatter implements ReportFormatter
         $classCount = count($report->classOrphans);
         $bladeCount = count($report->bladeOrphans);
 
+        $classSection = '';
+        if ($classCount > 0) {
+            $classSection = <<<HTML
+                <h2>Classes</h2>
+                <p class="summary">Found {$classCount} orphaned class(es)</p>
+                <table>
+                    <thead>
+                        <tr><th>Class</th><th>File</th><th>Line</th></tr>
+                    </thead>
+                    <tbody>
+            {$classRows}        </tbody>
+                </table>
+            HTML;
+        }
+
         $bladeSection = '';
         if ($bladeCount > 0) {
             $bladeSection = <<<HTML
@@ -62,15 +77,7 @@ class HtmlFormatter implements ReportFormatter
         </head>
         <body>
             <h1>Prune Report</h1>
-            <h2>Classes</h2>
-            <p class="summary">Found {$classCount} orphaned class(es)</p>
-            <table>
-                <thead>
-                    <tr><th>Class</th><th>File</th><th>Line</th></tr>
-                </thead>
-                <tbody>
-        {$classRows}        </tbody>
-            </table>
+        {$classSection}
         {$bladeSection}
         </body>
         </html>

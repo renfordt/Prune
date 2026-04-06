@@ -112,8 +112,4 @@ class BladeReferenceScanner extends NodeVisitorAbstract
         return array_keys($this->references);
     }
 
-    public function reset(): void
-    {
-        $this->references = [];
-    }
 }

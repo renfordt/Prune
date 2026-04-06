@@ -23,6 +23,6 @@ class JsonFormatter implements ReportFormatter
             ], $report->bladeOrphans),
         ];
 
-        return json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+        return json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n";
     }
 }

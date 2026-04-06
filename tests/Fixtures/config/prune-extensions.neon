@@ -1,0 +1,4 @@
+parameters:
+    extensions:
+        - php
+        - inc

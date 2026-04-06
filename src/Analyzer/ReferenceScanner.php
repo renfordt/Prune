@@ -6,32 +6,69 @@ namespace Renfordt\Prune\Analyzer;
 
 use PhpParser\Node;
 use PhpParser\Node\Expr\ClassConstFetch;
+use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\Instanceof_;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\StaticPropertyFetch;
 use PhpParser\Node\Name;
+use PhpParser\Node\Scalar\String_;
 use PhpParser\Node\Stmt\Catch_;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\Enum_;
 use PhpParser\Node\Stmt\Interface_;
 use PhpParser\Node\Stmt\TraitUse;
+use PhpParser\Node\Stmt\Use_;
 use PhpParser\NodeVisitorAbstract;
 
 class ReferenceScanner extends NodeVisitorAbstract
 {
+    private const array BUILTIN_TYPES = [
+        'self', 'static', 'parent', 'int', 'string', 'float', 'bool',
+        'array', 'object', 'mixed', 'void', 'never', 'null', 'true', 'false',
+        'iterable', 'callable',
+    ];
+
+    private const array FUNCALL_CLASS_FUNCTIONS = [
+        'class_exists' => 0,
+        'class_implements' => 0,
+        'class_parents' => 0,
+        'interface_exists' => 0,
+        'is_a' => 1,
+        'is_subclass_of' => 1,
+        'app' => 0,
+    ];
+
     /** @var array<string, true> */
     private array $references = [];
 
-    public function setCurrentFile(string $file): void
+    /** @var array<string, string> Alias => FQCN, built from use statements per file */
+    private array $useMap = [];
+
+    /**
+     * @param  array<Node>  $nodes
+     * @return array<Node>|null
+     */
+    public function beforeTraverse(array $nodes): ?array
     {
+        $this->useMap = [];
+
+        return null;
     }
 
     public function enterNode(Node $node): null
     {
+        // Track use imports for docblock resolution
+        if ($node instanceof Use_) {
+            foreach ($node->uses as $use) {
+                $alias = $use->alias?->toString() ?? $use->name->getLast();
+                $this->useMap[$alias] = $use->name->toString();
+            }
+        }
+
         // extends / implements
         if ($node instanceof Class_) {
-            if ($node->extends instanceof \PhpParser\Node\Name) {
+            if ($node->extends instanceof Name) {
                 $this->addReference($node->extends);
             }
             foreach ($node->implements as $implement) {
@@ -87,13 +124,13 @@ class ReferenceScanner extends NodeVisitorAbstract
         }
 
         // Type hints (parameters, return types, properties)
-        if ($node instanceof Node\Param && $node->type instanceof \PhpParser\Node) {
+        if ($node instanceof Node\Param && $node->type instanceof Node) {
             $this->collectTypeReferences($node->type);
         }
-        if (($node instanceof Node\Stmt\Function_ || $node instanceof Node\Stmt\ClassMethod) && $node->returnType instanceof \PhpParser\Node) {
+        if (($node instanceof Node\Stmt\Function_ || $node instanceof Node\Stmt\ClassMethod) && $node->returnType instanceof Node) {
             $this->collectTypeReferences($node->returnType);
         }
-        if ($node instanceof Node\Stmt\Property && $node->type instanceof \PhpParser\Node) {
+        if ($node instanceof Node\Stmt\Property && $node->type instanceof Node) {
             $this->collectTypeReferences($node->type);
         }
 
@@ -103,6 +140,17 @@ class ReferenceScanner extends NodeVisitorAbstract
                 $this->addReference($attr->name);
             }
         }
+
+        // Function calls that reference classes: class_exists(), is_a(), app(), etc.
+        if ($node instanceof FuncCall && $node->name instanceof Name) {
+            $funcName = $node->name->toString();
+            if (isset(self::FUNCALL_CLASS_FUNCTIONS[$funcName])) {
+                $this->extractClassFromArg($node->getArgs(), self::FUNCALL_CLASS_FUNCTIONS[$funcName]);
+            }
+        }
+
+        // PHPDoc comments on any node that can carry a docblock
+        $this->scanDocComment($node);
 
         return null;
     }
@@ -120,12 +168,92 @@ class ReferenceScanner extends NodeVisitorAbstract
         }
     }
 
+    /**
+     * @param  array<Node\Arg>  $args
+     */
+    private function extractClassFromArg(array $args, int $index): void
+    {
+        if (! isset($args[$index])) {
+            return;
+        }
+
+        $value = $args[$index]->value;
+
+        // String literal: class_exists('App\Models\User')
+        // Only match FQCNs (containing backslash) to avoid ambiguous short names
+        if ($value instanceof String_) {
+            $className = ltrim($value->value, '\\');
+            if ($className !== '' && str_contains($className, '\\')) {
+                $this->references[$className] = true;
+            }
+
+            return;
+        }
+
+        // Class constant: class_exists(User::class)
+        if ($value instanceof ClassConstFetch
+            && $value->class instanceof Name
+            && $value->name instanceof Node\Identifier
+            && strtolower($value->name->toString()) === 'class') {
+            $this->addReference($value->class);
+        }
+    }
+
+    private function scanDocComment(Node $node): void
+    {
+        $docComment = $node->getDocComment();
+        if (!$docComment instanceof \PhpParser\Comment\Doc) {
+            return;
+        }
+
+        $text = $docComment->getText();
+
+        // Extract types from @param, @return, @var, @throws, @template extends/of,
+        // @extends, @implements, @mixin, @see tags
+        preg_match_all(
+            '/@(?:param|return|var|throws|extends|implements|mixin|see|template\s+\w+\s+(?:of|extends))\s+((?:\?|list<|array<|iterable<)?\\\\?[A-Z][a-zA-Z0-9_\\\\]*)/',
+            $text,
+            $matches,
+        );
+
+        foreach ($matches[1] as $raw) {
+            // Strip leading ? or generic wrappers like list<, array<
+            $raw = preg_replace('/^[?]|^(?:list|array|iterable)</', '', $raw) ?? $raw;
+            $raw = rtrim($raw, '>');
+            $name = ltrim($raw, '\\');
+
+            if ($name === '') {
+                continue;
+            }
+
+            // FQCN in docblock (contains backslash) — add directly
+            if (str_contains($name, '\\')) {
+                $this->addReferenceByString($name);
+
+                continue;
+            }
+
+            // Short name — resolve via use map
+            if (isset($this->useMap[$name])) {
+                $this->addReferenceByString($this->useMap[$name]);
+            }
+        }
+
+        // Also catch bare FQCNs anywhere in docblock (e.g., inside generics like Collection<App\Models\User>)
+        preg_match_all('/\\\\?((?:[A-Z]\w*\\\\)+[A-Z]\w*)/', $text, $fqcnMatches);
+        foreach ($fqcnMatches[1] as $fqcn) {
+            $this->addReferenceByString(ltrim($fqcn, '\\'));
+        }
+    }
+
     private function addReference(Name $name): void
     {
-        $resolved = $name->toString();
+        $this->addReferenceByString($name->toString());
+    }
 
-        // Skip built-in types and self-references
-        if (in_array(strtolower($resolved), ['self', 'static', 'parent', 'int', 'string', 'float', 'bool', 'array', 'object', 'mixed', 'void', 'never', 'null', 'true', 'false', 'iterable', 'callable'], true)) {
+    private function addReferenceByString(string $resolved): void
+    {
+        if (in_array(strtolower($resolved), self::BUILTIN_TYPES, true)) {
             return;
         }
 
@@ -138,10 +266,5 @@ class ReferenceScanner extends NodeVisitorAbstract
     public function getReferences(): array
     {
         return array_keys($this->references);
-    }
-
-    public function reset(): void
-    {
-        $this->references = [];
     }
 }

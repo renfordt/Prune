@@ -55,8 +55,4 @@ class ClassMapBuilder extends NodeVisitorAbstract
         return $this->classMap;
     }
 
-    public function reset(): void
-    {
-        $this->classMap = [];
-    }
 }
