@@ -62,7 +62,11 @@ class BladeViewDiscovery
                 continue;
             }
 
-            return str_replace(DIRECTORY_SEPARATOR, '.', $relative);
+            // Strip the Livewire 4 / Volt anonymous-component prefix (⚡) from each path segment.
+            // Files like ⚡counter.blade.php are referenced in code without the prefix.
+            $viewName = str_replace(DIRECTORY_SEPARATOR, '.', $relative);
+
+            return str_replace('⚡', '', $viewName);
         }
 
         return null;

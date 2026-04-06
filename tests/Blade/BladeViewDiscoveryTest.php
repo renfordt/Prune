@@ -48,4 +48,21 @@ class BladeViewDiscoveryTest extends TestCase
         $this->assertNotNull($layoutView);
         $this->assertStringEndsWith('layouts' . DIRECTORY_SEPARATOR . 'app.blade.php', $layoutView->file);
     }
+
+    #[Test]
+    public function itStripsLivewire4BoltPrefixFromViewName(): void
+    {
+        $discovery = new BladeViewDiscovery();
+        $views = $discovery->discover([__DIR__ . '/../Fixtures/blade/views']);
+
+        $viewNames = array_map(fn (BladeEntry $e): string => $e->viewName, $views);
+
+        // livewire/⚡counter.blade.php must be discovered without the ⚡ prefix
+        $this->assertContains('livewire.counter', $viewNames);
+        $this->assertNotContains('livewire.⚡counter', $viewNames);
+
+        // components/⚡volt-button.blade.php (Livewire 4 Volt in components/) same rule
+        $this->assertContains('components.volt-button', $viewNames);
+        $this->assertNotContains('components.⚡volt-button', $viewNames);
+    }
 }

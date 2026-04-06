@@ -69,6 +69,39 @@ class PruneAnalyzer
             $fileCount++;
         }
 
+        // Scan extra blade reference paths (e.g. routes/) with a blade-only traverser
+        // so that view() / Route::view() calls there are picked up without polluting the class map.
+        $bladeRefTraverser = new NodeTraverser();
+        $bladeRefTraverser->addVisitor(new NameResolver());
+        $bladeRefTraverser->addVisitor($bladeReferenceScanner);
+
+        foreach ($config->bladeReferencePaths as $refPath) {
+            $absRefPath = $this->toAbsolutePath($refPath, $workingDir);
+            if (!is_dir($absRefPath)) {
+                continue;
+            }
+
+            $refFinder = new Finder();
+            $refFinder->files()->in($absRefPath);
+            foreach ($config->extensions as $ext) {
+                $refFinder->name('*.' . $ext);
+            }
+
+            foreach ($refFinder as $file) {
+                $filePath = $file->getRealPath();
+                if ($filePath === false) {
+                    continue;
+                }
+
+                $stmts = $parser->parse($filePath);
+                if ($stmts === []) {
+                    continue;
+                }
+
+                $bladeRefTraverser->traverse($stmts);
+            }
+        }
+
         $classOrphans = [];
         if ($classEnabled) {
             $detector = new OrphanDetector();

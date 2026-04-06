@@ -1,0 +1,1 @@
+<div>Counter component</div>

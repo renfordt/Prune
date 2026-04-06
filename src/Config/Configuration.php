@@ -13,6 +13,7 @@ class Configuration
      * @param  list<string>  $excludePaths
      * @param  list<string>  $extensions
      * @param  list<string>  $bladeViewPaths
+     * @param  list<string>  $bladeReferencePaths
      * @param  list<string>  $bladeExcludeViews
      */
     public function __construct(
@@ -22,6 +23,7 @@ class Configuration
         public readonly string $format = 'console',
         public readonly bool $bladeEnabled = true,
         public readonly array $bladeViewPaths = ['resources/views'],
+        public readonly array $bladeReferencePaths = ['routes'],
         public readonly array $bladeExcludeViews = [],
     ) {
     }
@@ -58,6 +60,8 @@ class Configuration
         $bladeEnabled = $blade['enabled'] ?? true;
         /** @var list<string> $bladeViewPaths */
         $bladeViewPaths = $blade['viewPaths'] ?? ['resources/views'];
+        /** @var list<string> $bladeReferencePaths */
+        $bladeReferencePaths = $blade['referencePaths'] ?? ['routes'];
         /** @var list<string> $bladeExcludeViews */
         $bladeExcludeViews = $blade['excludeViews'] ?? [];
 
@@ -68,6 +72,7 @@ class Configuration
             format: $format,
             bladeEnabled: $bladeEnabled,
             bladeViewPaths: $bladeViewPaths,
+            bladeReferencePaths: $bladeReferencePaths,
             bladeExcludeViews: $bladeExcludeViews,
         );
     }
