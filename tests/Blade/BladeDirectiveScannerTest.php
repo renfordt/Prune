@@ -126,7 +126,7 @@ class BladeDirectiveScannerTest extends TestCase
 
         $references = $this->scanner->scan($content);
 
-        $this->assertContains('counter', $references);
+        $this->assertContains('livewire.counter', $references);
     }
 
     #[Test]
@@ -136,7 +136,7 @@ class BladeDirectiveScannerTest extends TestCase
 
         $references = $this->scanner->scan($content);
 
-        $this->assertContains('counter', $references);
+        $this->assertContains('livewire.counter', $references);
     }
 
     #[Test]
@@ -146,7 +146,27 @@ class BladeDirectiveScannerTest extends TestCase
 
         $references = $this->scanner->scan($content);
 
-        $this->assertContains('user-profile', $references);
+        $this->assertContains('livewire.user-profile', $references);
+    }
+
+    #[Test]
+    public function itExtractsNestedLivewireTags(): void
+    {
+        $content = '<livewire:forms.input />';
+
+        $references = $this->scanner->scan($content);
+
+        $this->assertContains('livewire.forms.input', $references);
+    }
+
+    #[Test]
+    public function itExtractsLivewireDirectivesWithSubdirectory(): void
+    {
+        $content = "@livewire('forms.input')";
+
+        $references = $this->scanner->scan($content);
+
+        $this->assertContains('livewire.forms.input', $references);
     }
 
     #[Test]

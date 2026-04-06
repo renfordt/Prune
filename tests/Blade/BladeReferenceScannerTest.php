@@ -106,6 +106,36 @@ class BladeReferenceScannerTest extends TestCase
     }
 
     #[Test]
+    public function itExtractsResponseViewCalls(): void
+    {
+        $code = <<<'PHP'
+        <?php
+        return response()->view('errors.404', [], 404);
+        PHP;
+
+        $references = $this->scanCode($code);
+
+        $this->assertContains('errors.404', $references);
+    }
+
+    #[Test]
+    public function itExtractsChainedViewCalls(): void
+    {
+        $code = <<<'PHP'
+        <?php
+        class Controller {
+            public function show() {
+                return $this->someHelper()->view('pages.show');
+            }
+        }
+        PHP;
+
+        $references = $this->scanCode($code);
+
+        $this->assertContains('pages.show', $references);
+    }
+
+    #[Test]
     public function itReturnsEmptyForNoViewReferences(): void
     {
         $code = <<<'PHP'

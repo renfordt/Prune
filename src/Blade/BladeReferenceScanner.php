@@ -52,8 +52,8 @@ class BladeReferenceScanner extends NodeVisitorAbstract
             }
         }
 
-        // $this->view('name'), $this->markdown('name')
-        if ($node instanceof MethodCall && $node->var instanceof Node\Expr\Variable && $node->var->name === 'this') {
+        // ->view('name'), ->markdown('name') — covers $this->view(), response()->view(), etc.
+        if ($node instanceof MethodCall) {
             $methodName = $node->name instanceof Node\Identifier ? $node->name->toString() : null;
             if ($methodName === 'view' || $methodName === 'markdown') {
                 $this->extractFirstStringArg($node->getArgs());

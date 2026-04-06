@@ -167,6 +167,46 @@ class ReferenceScannerTest extends TestCase
         $this->assertContains('App\Services\PaymentService', $references);
     }
 
+    // --- Route string controller references ---
+
+    #[Test]
+    public function itFindsRouteStringControllerFqcn(): void
+    {
+        $references = $this->scanCode(<<<'PHP'
+            <?php
+            use Illuminate\Support\Facades\Route;
+            Route::get('/users', 'App\Http\Controllers\UserController@index');
+            PHP);
+
+        $this->assertContains('App\Http\Controllers\UserController', $references);
+    }
+
+    #[Test]
+    public function itFindsRouteStringControllerForAllHttpMethods(): void
+    {
+        $references = $this->scanCode(<<<'PHP'
+            <?php
+            use Illuminate\Support\Facades\Route;
+            Route::post('/users', 'App\Http\Controllers\UserController@store');
+            Route::put('/users/{id}', 'App\Http\Controllers\UserController@update');
+            PHP);
+
+        $this->assertContains('App\Http\Controllers\UserController', $references);
+    }
+
+    #[Test]
+    public function itIgnoresRouteStringControllerWithoutNamespace(): void
+    {
+        // Short names without backslash are ambiguous — intentionally skipped
+        $references = $this->scanCode(<<<'PHP'
+            <?php
+            use Illuminate\Support\Facades\Route;
+            Route::get('/users', 'UserController@index');
+            PHP);
+
+        $this->assertNotContains('UserController', $references);
+    }
+
     /**
      * @return list<string>
      */

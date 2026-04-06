@@ -43,24 +43,24 @@ class BladeDirectiveScanner
             $references[] = $this->componentTagToViewName($match);
         }
 
-        // @livewire('name')
+        // @livewire('name') — component identifier maps to livewire/<name>.blade.php
         preg_match_all(
             '/@livewire\s*\(\s*[\'"]([^\'"]+)[\'"]/',
             $content,
             $matches,
         );
         foreach ($matches[1] as $match) {
-            $references[] = $match;
+            $references[] = $this->livewireComponentToViewName($match);
         }
 
-        // <livewire:name>
+        // <livewire:name> — same convention
         preg_match_all(
             '/<livewire:([a-zA-Z0-9\-_.]+)/',
             $content,
             $matches,
         );
         foreach ($matches[1] as $match) {
-            $references[] = $match;
+            $references[] = $this->livewireComponentToViewName($match);
         }
 
         return array_values(array_unique($references));
@@ -74,5 +74,13 @@ class BladeDirectiveScanner
         $name = str_replace('::', '.', $tag);
 
         return 'components.' . $name;
+    }
+
+    private function livewireComponentToViewName(string $component): string
+    {
+        // @livewire('counter') / <livewire:counter> => livewire.counter
+        // @livewire('forms.input') / <livewire:forms.input> => livewire.forms.input
+        // Dashes stay as-is; dots represent subdirectories
+        return 'livewire.' . $component;
     }
 }

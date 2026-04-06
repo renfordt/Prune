@@ -141,6 +141,17 @@ class ReferenceScanner extends NodeVisitorAbstract
             }
         }
 
+        // Route::get('/path', 'App\Http\Controllers\Foo@method') string controller references
+        if ($node instanceof StaticCall && $node->class instanceof Name) {
+            $calledClass = $node->class->toString();
+            if ($calledClass === 'Route' || str_ends_with($calledClass, '\Route')) {
+                $args = $node->getArgs();
+                if (count($args) >= 2 && $args[1]->value instanceof String_) {
+                    $this->extractControllerFromRouteString($args[1]->value->value);
+                }
+            }
+        }
+
         // Function calls that reference classes: class_exists(), is_a(), app(), etc.
         if ($node instanceof FuncCall && $node->name instanceof Name) {
             $funcName = $node->name->toString();
@@ -243,6 +254,22 @@ class ReferenceScanner extends NodeVisitorAbstract
         preg_match_all('/\\\\?((?:[A-Z]\w*\\\\)+[A-Z]\w*)/', $text, $fqcnMatches);
         foreach ($fqcnMatches[1] as $fqcn) {
             $this->addReferenceByString(ltrim($fqcn, '\\'));
+        }
+    }
+
+    private function extractControllerFromRouteString(string $value): void
+    {
+        // 'App\Http\Controllers\FooController@index' — extract the FQCN before @
+        // Only handle FQCNs (containing backslash) to avoid ambiguous short names
+        if (! str_contains($value, '@')) {
+            return;
+        }
+
+        [$controllerClass] = explode('@', $value, 2);
+        $controllerClass = ltrim(trim($controllerClass), '\\');
+
+        if ($controllerClass !== '' && str_contains($controllerClass, '\\')) {
+            $this->addReferenceByString($controllerClass);
         }
     }
 
