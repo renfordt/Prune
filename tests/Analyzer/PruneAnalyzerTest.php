@@ -43,10 +43,13 @@ class PruneAnalyzerTest extends TestCase
 
     private string $bladeViewsDir;
 
+    private string $bladeRouteDir;
+
     protected function setUp(): void
     {
         $this->pipelineDir = __DIR__ . '/../Fixtures/pipeline';
         $this->bladeViewsDir = __DIR__ . '/../Fixtures/blade/views';
+        $this->bladeRouteDir = __DIR__ . '/../Fixtures/blade-route';
     }
 
     #[Test]
@@ -126,6 +129,34 @@ class PruneAnalyzerTest extends TestCase
         );
 
         $orphanNames = array_map(fn (BladeEntry $e): string => $e->viewName, $result->report->bladeOrphans);
+        $this->assertContains('orphaned', $orphanNames);
+    }
+
+    #[Test]
+    public function itPicksUpViewReferencesFromBladeReferencePaths(): void
+    {
+        $viewsDir = $this->bladeRouteDir . '/views';
+        $routesDir = $this->bladeRouteDir . '/routes';
+
+        $config = new Configuration(
+            paths: [$viewsDir],
+            bladeEnabled: true,
+            bladeViewPaths: [$viewsDir],
+            bladeReferencePaths: [$routesDir],
+        );
+
+        $result = new PruneAnalyzer()->analyze(
+            config: $config,
+            paths: [$viewsDir],
+            classEnabled: false,
+            bladeEnabled: true,
+            workingDir: $this->bladeRouteDir,
+        );
+
+        $orphanNames = array_map(fn (BladeEntry $e): string => $e->viewName, $result->report->bladeOrphans);
+        // 'about' is referenced via Route::view() in routes/web.php — must NOT be orphaned
+        $this->assertNotContains('about', $orphanNames);
+        // 'orphaned' has no reference anywhere — must be orphaned
         $this->assertContains('orphaned', $orphanNames);
     }
 }
