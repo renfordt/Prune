@@ -10,15 +10,16 @@ class HtmlFormatter implements ReportFormatter
     {
         $classRows = '';
         foreach ($report->classOrphans as $orphan) {
-            $fqcn = htmlspecialchars($orphan->fqcn, ENT_QUOTES | ENT_HTML5);
-            $file = htmlspecialchars($orphan->file, ENT_QUOTES | ENT_HTML5);
-            $classRows .= "            <tr><td>{$fqcn}</td><td>{$file}</td><td>{$orphan->line}</td></tr>\n";
+            $fqcn = $this->e($orphan->fqcn);
+            $file = $this->e($orphan->file);
+            $line = $this->e((string) $orphan->line);
+            $classRows .= "            <tr><td>{$fqcn}</td><td>{$file}</td><td>{$line}</td></tr>\n";
         }
 
         $bladeRows = '';
         foreach ($report->bladeOrphans as $orphan) {
-            $viewName = htmlspecialchars($orphan->viewName, ENT_QUOTES | ENT_HTML5);
-            $file = htmlspecialchars($orphan->file, ENT_QUOTES | ENT_HTML5);
+            $viewName = $this->e($orphan->viewName);
+            $file = $this->e($orphan->file);
             $bladeRows .= "            <tr><td>{$viewName}</td><td>{$file}</td></tr>\n";
         }
 
@@ -83,5 +84,10 @@ class HtmlFormatter implements ReportFormatter
         </html>
 
         HTML;
+    }
+
+    private function e(string $value): string
+    {
+        return htmlspecialchars($value, ENT_QUOTES | ENT_HTML5);
     }
 }

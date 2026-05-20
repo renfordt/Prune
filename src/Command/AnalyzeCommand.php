@@ -67,7 +67,7 @@ class AnalyzeCommand extends Command
 
         if ($outputFile === null && $format !== 'console') {
             $pruneDir = $workingDir . '/.prune';
-            if (! is_dir($pruneDir) && ! mkdir($pruneDir, 0755, true) && ! is_dir($pruneDir)) {
+            if (! is_dir($pruneDir) && ! mkdir($pruneDir, 0750, true) && ! is_dir($pruneDir)) {
                 $output->writeln(sprintf('<error>Failed to create output directory: %s</error>', $pruneDir));
 
                 return Command::FAILURE;
@@ -76,7 +76,10 @@ class AnalyzeCommand extends Command
         }
 
         if ($outputFile !== null) {
-            file_put_contents($outputFile, $formattedReport);
+            if (! $this->isSafeOutputPath($outputFile, $output)) {
+                return Command::FAILURE;
+            }
+            file_put_contents($outputFile, $formattedReport, LOCK_EX);
             $output->writeln(sprintf('Report written to %s', $outputFile));
         } else {
             $output->write($formattedReport);
@@ -87,6 +90,24 @@ class AnalyzeCommand extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    private function isSafeOutputPath(string $path, OutputInterface $output): bool
+    {
+        $parent = dirname($path);
+        if (! is_dir($parent)) {
+            $output->writeln(sprintf('<error>Output directory does not exist: %s</error>', $parent));
+
+            return false;
+        }
+
+        if (file_exists($path) && (is_link($path) || ! is_file($path))) {
+            $output->writeln(sprintf('<error>Refusing to overwrite non-regular file: %s</error>', $path));
+
+            return false;
+        }
+
+        return true;
     }
 
     private function createFormatter(string $format): ReportFormatter

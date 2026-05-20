@@ -13,7 +13,6 @@ final readonly class AnalysisResult
      *
      * @param Report $report An instance of the Report class.
      * @param int $fileCount The number of files to process.
-     * @return void
      */
     public function __construct(
         public Report $report,

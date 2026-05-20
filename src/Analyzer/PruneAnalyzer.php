@@ -131,30 +131,33 @@ class PruneAnalyzer
 
         $bladeOrphans = [];
         if ($bladeEnabled) {
-            $bladeViewPaths = array_values(array_unique(array_merge(
-                $absolutePaths,
-                array_map(
-                    fn (string $path): string => $this->toAbsolutePath($path, $workingDir),
-                    $config->bladeViewPaths,
-                ),
-            )));
+            $viewPathSet = [];
+            foreach ($absolutePaths as $p) {
+                $viewPathSet[$p] = true;
+            }
+            foreach ($config->bladeViewPaths as $p) {
+                $viewPathSet[$this->toAbsolutePath($p, $workingDir)] = true;
+            }
+            $bladeViewPaths = array_keys($viewPathSet);
 
             $discovery = new BladeViewDiscovery();
             $allBladeViews = $discovery->discover($bladeViewPaths);
 
-            $phpReferences = $bladeReferenceScanner->getReferences();
-
             $directiveScanner = new BladeDirectiveScanner();
-            $bladeReferences = [];
+            $referenceSet = [];
+            foreach ($bladeReferenceScanner->getReferences() as $ref) {
+                $referenceSet[$ref] = true;
+            }
             foreach ($allBladeViews as $entry) {
                 $content = file_get_contents($entry->file);
                 if ($content === false) {
                     continue;
                 }
-                $bladeReferences = array_merge($bladeReferences, $directiveScanner->scan($content));
+                foreach ($directiveScanner->scan($content) as $ref) {
+                    $referenceSet[$ref] = true;
+                }
             }
-
-            $allReferences = array_values(array_unique(array_merge($phpReferences, $bladeReferences)));
+            $allReferences = array_keys($referenceSet);
 
             $bladeDetector = new BladeOrphanDetector();
             $bladeOrphans = $bladeDetector->detect($allBladeViews, $allReferences, $config->bladeExcludeViews);

@@ -193,7 +193,7 @@ class ReferenceScanner extends NodeVisitorAbstract
         // String literal: class_exists('App\Models\User')
         // Only match FQCNs (containing backslash) to avoid ambiguous short names
         if ($value instanceof String_) {
-            $className = ltrim($value->value, '\\');
+            $className = $this->normalizeFqcn($value->value);
             if ($className !== '' && str_contains($className, '\\')) {
                 $this->references[$className] = true;
             }
@@ -231,7 +231,7 @@ class ReferenceScanner extends NodeVisitorAbstract
             // Strip leading ? or generic wrappers like list<, array<
             $raw = preg_replace('/^[?]|^(?:list|array|iterable)</', '', $raw) ?? $raw;
             $raw = rtrim($raw, '>');
-            $name = ltrim($raw, '\\');
+            $name = $this->normalizeFqcn($raw);
 
             if ($name === '') {
                 continue;
@@ -253,7 +253,7 @@ class ReferenceScanner extends NodeVisitorAbstract
         // Also catch bare FQCNs anywhere in docblock (e.g., inside generics like Collection<App\Models\User>)
         preg_match_all('/\\\\?((?:[A-Z]\w*\\\\)+[A-Z]\w*)/', $text, $fqcnMatches);
         foreach ($fqcnMatches[1] as $fqcn) {
-            $this->addReferenceByString(ltrim($fqcn, '\\'));
+            $this->addReferenceByString($this->normalizeFqcn($fqcn));
         }
     }
 
@@ -266,7 +266,7 @@ class ReferenceScanner extends NodeVisitorAbstract
         }
 
         [$controllerClass] = explode('@', $value, 2);
-        $controllerClass = ltrim(trim($controllerClass), '\\');
+        $controllerClass = $this->normalizeFqcn(trim($controllerClass));
 
         if ($controllerClass !== '' && str_contains($controllerClass, '\\')) {
             $this->addReferenceByString($controllerClass);
@@ -276,6 +276,11 @@ class ReferenceScanner extends NodeVisitorAbstract
     private function addReference(Name $name): void
     {
         $this->addReferenceByString($name->toString());
+    }
+
+    private function normalizeFqcn(string $name): string
+    {
+        return ltrim($name, '\\');
     }
 
     private function addReferenceByString(string $resolved): void

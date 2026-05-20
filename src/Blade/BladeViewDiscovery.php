@@ -20,11 +20,19 @@ class BladeViewDiscovery
             return [];
         }
 
-        // Sort by path length descending so more specific paths match first
-        // in pathToViewName(). This prevents a parent like resources/ from
-        // matching before resources/views/ and producing wrong view names
-        // (e.g. "views.about" instead of "about").
-        usort($existingPaths, fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+        // Resolve each base path to its realpath once, then sort by length descending
+        // so more specific paths match first in pathToViewName(). This prevents a
+        // parent like resources/ from matching before resources/views/ and producing
+        // wrong view names (e.g. "views.about" instead of "about").
+        $realBases = [];
+        foreach ($existingPaths as $basePath) {
+            $real = realpath($basePath);
+            if ($real !== false) {
+                $realBases[$real] = true;
+            }
+        }
+        $realBases = array_keys($realBases);
+        usort($realBases, fn (string $a, string $b): int => strlen($b) <=> strlen($a));
 
         $finder = new Finder();
         $finder->files()->in($existingPaths)->name('*.blade.php')->sortByName();
@@ -41,7 +49,7 @@ class BladeViewDiscovery
                 continue;
             }
 
-            $viewName = $this->pathToViewName($realPath, $existingPaths);
+            $viewName = $this->pathToViewName($realPath, $realBases);
             if ($viewName === null) {
                 continue;
             }
@@ -53,16 +61,11 @@ class BladeViewDiscovery
     }
 
     /**
-     * @param  list<string>  $viewPaths
+     * @param  list<string>  $realBases  Realpath'd base directories, longest-first.
      */
-    private function pathToViewName(string $filePath, array $viewPaths): ?string
+    private function pathToViewName(string $filePath, array $realBases): ?string
     {
-        foreach ($viewPaths as $basePath) {
-            $realBase = realpath($basePath);
-            if ($realBase === false) {
-                continue;
-            }
-
+        foreach ($realBases as $realBase) {
             if (! str_starts_with($filePath, $realBase . DIRECTORY_SEPARATOR)) {
                 continue;
             }

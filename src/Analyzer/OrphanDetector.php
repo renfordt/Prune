@@ -17,14 +17,7 @@ class OrphanDetector
      */
     public function detect(array $classMap, array $references): array
     {
-        $referencedSet = array_flip($references);
-
-        $orphans = [];
-        foreach ($classMap as $fqcn => $entry) {
-            if (! isset($referencedSet[$fqcn])) {
-                $orphans[] = $entry;
-            }
-        }
+        $orphans = array_values(array_diff_key($classMap, array_flip($references)));
 
         usort($orphans, fn (ClassEntry $a, ClassEntry $b): int => $a->file <=> $b->file);
 
